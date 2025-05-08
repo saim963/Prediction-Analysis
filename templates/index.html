@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Next-Word Prediction Explorer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="input-section">
+        <h2>Next-Word Prediction Explorer</h2>
+        <input
+          id="phraseInput"
+          type="text"
+          placeholder="Enter a phrase or sentence"
+          value="The cat sat on the"
+        />
+        <button id="predictBtn" onclick="predictAndVisualize()">
+          Predict Next Words
+        </button>
+      </div>
+      <div class="visualization-container">
+        <div class="prediction-panel">
+          <h3>Top Predictions</h3>
+          <div id="prediction"></div>
+          <div id="contextClues" class="context-clues"></div>
+        </div>
+        <div class="heatmap-panel">
+          <h3>Prediction Heatmap</h3>
+          <canvas id="heatmapChart"></canvas>
+        </div>
+      </div>
+      <div id="canvasContainer" class="canvas-container"></div>
+      <div class="comparison-section">
+        <h3>Compare Similar Phrases</h3>
+        <div class="example-phrases">
+          <div
+            class="example-phrase"
+            onclick="useExample('The cat sat on the')"
+          >
+            The cat sat on the
+          </div>
+          <div
+            class="example-phrase"
+            onclick="useExample('The dog sat on the')"
+          >
+            The dog sat on the
+          </div>
+          <div
+            class="example-phrase"
+            onclick="useExample('The bird sat on the')"
+          >
+            The bird sat on the
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>
