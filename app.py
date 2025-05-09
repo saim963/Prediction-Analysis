@@ -125,4 +125,4 @@ IMPORTANT: Respond with ONLY the JSON object. No other text, no thinking process
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run() 
