@@ -9,6 +9,8 @@ User-friendly web interface for input and visualization.
 Scalable deployment on cloud platforms like Render.
 Integration with environment variables for secure API key management.
 
+Access the website at: https://prediction-analysis.onrender.com/
+
 Tech Stack
 
 Backend: Python 3.11, Flask
@@ -21,7 +23,7 @@ Installation
 Follow these steps to set up the project locally:
 
 Clone the Repository:
-git clone https://github.com/your-username/prediction-analysis.git
+git clone https://github.com/saim963/Prediction-Analysis.git
 cd prediction-analysis
 
 
