@@ -1,12 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Next-Word Prediction Explorer - An interactive tool for exploring language model predictions"
-    />
     <title>Next-Word Prediction Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -14,24 +8,6 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
-    <!-- Add error handling for script loading -->
-    <script>
-      window.onerror = function (msg, url, lineNo, columnNo, error) {
-        console.error(
-          "Error: " +
-            msg +
-            "\nURL: " +
-            url +
-            "\nLine: " +
-            lineNo +
-            "\nColumn: " +
-            columnNo +
-            "\nError object: " +
-            JSON.stringify(error)
-        );
-        return false;
-      };
-    </script>
   </head>
   <body>
     <div class="container">
@@ -42,66 +18,44 @@
           type="text"
           placeholder="Enter a phrase or sentence"
           value="The cat sat on the"
-          aria-label="Input phrase"
         />
-        <button
-          id="predictBtn"
-          onclick="predictAndVisualize()"
-          aria-label="Predict next words"
-        >
+        <button id="predictBtn" onclick="predictAndVisualize()">
           Predict Next Words
         </button>
       </div>
       <div class="visualization-container">
         <div class="prediction-panel">
           <h3>Top Predictions</h3>
-          <div id="prediction" role="region" aria-live="polite"></div>
-          <div
-            id="contextClues"
-            class="context-clues"
-            role="region"
-            aria-live="polite"
-          ></div>
+          <div id="prediction"></div>
+          <div id="contextClues" class="context-clues"></div>
         </div>
         <div class="heatmap-panel">
           <h3>Prediction Heatmap</h3>
-          <canvas
-            id="heatmapChart"
-            role="img"
-            aria-label="Prediction confidence heatmap"
-          ></canvas>
+          <canvas id="heatmapChart"></canvas>
         </div>
       </div>
-      <div
-        id="canvasContainer"
-        class="canvas-container"
-        role="img"
-        aria-label="Visualization canvas"
-      ></div>
+      <div id="canvasContainer" class="canvas-container"></div>
       <div class="comparison-section">
         <h3>Compare Similar Phrases</h3>
         <div class="example-phrases">
-          <button
+          <div
             class="example-phrase"
             onclick="useExample('The cat sat on the')"
-            aria-label="Use example: The cat sat on the"
           >
             The cat sat on the
-          </button>
-          <button
+          </div>
+          <div
             class="example-phrase"
             onclick="useExample('The dog sat on the')"
-            aria-label="Use example: The dog sat on the"
           >
             The dog sat on the
-          </button>
-          <button
+          </div>
+          <div
             class="example-phrase"
             onclick="useExample('The bird sat on the')"
-            aria-label="Use example: The bird sat on the"
           >
             The bird sat on the
-          </button>
+          </div>
         </div>
       </div>
     </div>
