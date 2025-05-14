@@ -22,6 +22,8 @@ else:
         print("Warning: NVIDIA_API_KEY format appears invalid")
     openai.api_key = api_key
 
+print("API Key present:", bool(api_key))  # This will print True/False without exposing the key
+
 def clean_json_response(response):
     # Find the first occurrence of a JSON object
     json_start = response.find('{')

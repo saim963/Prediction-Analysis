@@ -169,12 +169,16 @@ async function predictAndVisualize() {
             body: JSON.stringify({ phrase: input })
         });
 
-        const data = await response.json();
-        
+        // First check if the response is ok
         if (!response.ok) {
-            throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('Server error:', errorText);
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
         }
 
+        // Then try to parse as JSON
+        const data = await response.json();
+        
         let resultJson;
         try {
             resultJson = JSON.parse(data.response);
