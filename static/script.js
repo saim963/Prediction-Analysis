@@ -6,6 +6,13 @@ let lastRequestTime = 0;
 const COOLDOWN = 3000; // 3 seconds
 let heatmapChart = null;
 let canvas = null;
+let isProcessing = false;
+
+function windowResized() {
+    if (canvas) {
+        resizeCanvas(windowWidth * 0.8, 600);
+    }
+}
 
 function setup() {
     console.log('Setup called');
@@ -14,7 +21,7 @@ function setup() {
         console.error('Canvas container not found');
         return;
     }
-    canvas = createCanvas(1200, 600);
+    canvas = createCanvas(windowWidth * 0.8, 600);
     canvas.parent('canvasContainer');
     textSize(16);
 }
@@ -134,6 +141,10 @@ function useExample(phrase) {
 }
 
 async function predictAndVisualize() {
+    if (isProcessing) {
+        return;
+    }
+
     console.log('Predict called');
     const predictBtn = document.getElementById('predictBtn');
     const predictionDiv = document.getElementById('prediction');
@@ -145,6 +156,7 @@ async function predictAndVisualize() {
         return;
     }
 
+    isProcessing = true;
     predictBtn.disabled = true;
     predictionDiv.innerText = 'Predicting...';
     const input = document.getElementById('phraseInput').value;
@@ -152,6 +164,7 @@ async function predictAndVisualize() {
     if (!input.trim()) {
         predictionDiv.innerText = 'Please enter a phrase';
         predictBtn.disabled = false;
+        isProcessing = false;
         return;
     }
 
@@ -178,12 +191,18 @@ async function predictAndVisualize() {
 
         // Then try to parse as JSON
         const data = await response.json();
+        console.log('Received data:', data);
         
+        if (!data.response) {
+            throw new Error('No response data received from server');
+        }
+
         let resultJson;
         try {
             resultJson = JSON.parse(data.response);
         } catch (e) {
             console.error('JSON parse failed:', e);
+            console.error('Raw response:', data.response);
             throw new Error('Invalid response format from API');
         }
 
@@ -224,7 +243,8 @@ async function predictAndVisualize() {
         reasoning = {};
         updateHeatmap();
         updateContextClues();
+    } finally {
+        predictBtn.disabled = false;
+        isProcessing = false;
     }
-
-    predictBtn.disabled = false;
 } 

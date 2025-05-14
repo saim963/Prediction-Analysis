@@ -1,142 +1,79 @@
-Prediction Analysis
-  
-Overview
-Prediction Analysis is a web-based machine learning application designed to perform advanced text prediction and analysis. Leveraging natural language processing (NLP) techniques, the project provides insights into textual data, enabling users to explore predictive models interactively. Built with Python, Flask, and modern ML libraries, it showcases scalable deployment and real-time prediction capabilities. This project was developed as part of my MCA coursework to demonstrate expertise in machine learning, web development, and API integration.
-Key features:
+# Next-Word Prediction Explorer
 
-Real-time text prediction using state-of-the-art NLP models.
-User-friendly web interface for input and visualization.
-Scalable deployment on cloud platforms like Render.
-Integration with environment variables for secure API key management.
+An interactive web application that uses AI to predict the next word in a sentence and provides detailed analysis of the prediction process.
 
-Access the website at: https://prediction-analysis.onrender.com/
+## Features
 
-Tech Stack
+- Real-time next-word prediction
+- Confidence scores for predictions
+- Attention visualization
+- Grammar context analysis
+- Detailed reasoning for predictions
 
-Backend: Python 3.11, Flask
-Machine Learning: OpenAI API (or Hugging Face Transformers, depending on configuration)
-Frontend: HTML, CSS, JavaScript
-Deployment: Render
-Dependencies: python-dotenv, gunicorn, numpy, pandas (see requirements.txt)
+## Deployment
 
-Installation
-Follow these steps to set up the project locally:
+### Local Development
 
-Clone the Repository:
-git clone https://github.com/saim963/Prediction-Analysis.git
-cd prediction-analysis
+1. Clone the repository
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Create a `.env` file with your NVIDIA API key:
+   ```
+   NVIDIA_API_KEY=your_api_key_here
+   ```
+5. Run the application:
+   ```bash
+   python app.py
+   ```
 
+### Production Deployment
 
-Create a Virtual Environment:
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+1. Set up environment variables in your hosting platform:
 
+   - `NVIDIA_API_KEY`: Your NVIDIA API key
+   - `PORT`: Port number (optional, defaults to 5000)
 
-Install Dependencies:
-pip install -r requirements.txt
+2. Deploy to Render:
+   - Connect your GitHub repository
+   - Set the build command: `pip install -r requirements.txt`
+   - Set the start command: `gunicorn app:app`
 
+## Environment Variables
 
-Set Up Environment Variables:
+- `NVIDIA_API_KEY`: Required. Your NVIDIA API key for the language model
+- `PORT`: Optional. The port to run the application on (default: 5000)
 
-Create a .env file in the project root.
-Add necessary API keys (e.g., for OpenAI):OPENAI_API_KEY=your_openai_api_key
-PORT=8000
+## Error Handling
 
+The application includes comprehensive error handling for:
 
+- API failures
+- Invalid responses
+- Network issues
+- Rate limiting
 
+## Security
 
-Run the Application:
-python app.py
+- API keys are stored as environment variables
+- Input validation and sanitization
+- Rate limiting to prevent abuse
+- Error messages don't expose sensitive information
 
+## Contributing
 
-Access the app at http://localhost:8000 in your browser.
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
+## License
 
-
-Usage
-
-Launch the App:
-
-Start the server locally or deploy it on Render.
-Open the web interface in a browser.
-
-
-Input Data:
-
-Enter text or upload a dataset (depending on configuration) via the web interface.
-The app processes the input using the trained ML model.
-
-
-View Predictions:
-
-Explore real-time predictions, probabilities, or visualizations (e.g., heatmaps for word predictions).
-Results are displayed interactively on the webpage.
-
-
-Example:
-
-Input: "The quick brown fox"
-Output: Predicted next word (e.g., "jumps") with confidence scores.
-
-
-
-Deployment on Render
-To deploy the project on Render:
-
-Push to GitHub:
-
-Ensure your repository includes requirements.txt, app.py, and a Procfile:web: gunicorn --bind 0.0.0.0:$PORT app:app
-
-
-
-
-Create a Render Service:
-
-Log in to Render.
-Create a new web service, linking your GitHub repository.
-Set the environment to Python and configure:
-Build Command: pip install -r requirements.txt
-Start Command: gunicorn --bind 0.0.0.0:$PORT app:app
-Python Version: 3.11 (or match your local version)
-
-
-
-
-Add Environment Variables:
-
-In the Render dashboard, add keys like OPENAI_API_KEY under the "Environment" section.
-
-
-Deploy:
-
-Trigger a deployment and monitor logs for errors.
-Access the app at the provided Render URL (e.g., https://your-app.onrender.com).
-
-
-
-Project Structure
-prediction-analysis/
-├── .env                # Environment variables (not tracked)
-├── .gitignore          # Git ignore file
-├── app.py              # Main Flask application
-├── requirements.txt    # Python dependencies
-├── static/             # CSS, JavaScript, and images
-├── templates/          # HTML templates
-└── README.md           # Project documentation
-
-Contributing
-Contributions are welcome! To contribute:
-
-Fork the repository.
-Create a new branch (git checkout -b feature/your-feature).
-Make changes and commit (git commit -m "Add your feature").
-Push to the branch (git push origin feature/your-feature).
-Open a pull request.
-
-Please ensure code follows PEP 8 guidelines and includes tests where applicable.
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
-Contact
-For questions or feedback, reach out via GitHub Issues or connect with me on LinkedIn.
-
-Built by Saim Shakeel, an MCA student passionate about AI, ML, and web development.
+MIT License
