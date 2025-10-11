@@ -1,2 +1,10 @@
-prediction
+# Ignore environment variable files
 .env
+.env.*
+
+# Ignore virtual environment directories
+prediction/
+
+# Ignore common Python file artifacts
+__pycache__/
+*.pyc
