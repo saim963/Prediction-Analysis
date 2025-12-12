@@ -1,64 +1,91 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Next-Word Prediction Explorer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-  </head>
-  <body>
-    <div class="container">
-      <div class="input-section">
-        <h2>Next-Word Prediction Explorer</h2>
-        <input
-          id="phraseInput"
-          type="text"
-          placeholder="Enter a phrase or sentence"
-          value="The cat sat on the"
-        />
-        <button id="predictBtn" onclick="predictAndVisualize()">
-          Predict Next Words
-        </button>
-      </div>
-      <div class="visualization-container">
-        <div class="prediction-panel">
-          <h3>Top Predictions</h3>
-          <div id="prediction"></div>
-          <div id="contextClues" class="context-clues"></div>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Prediction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="app">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="header__title">Word Prediction</h1>
+            <p class="header__subtitle">Discover what comes next</p>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section">
+            <form id="predictionForm" class="input-form">
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="phraseInput" 
+                        class="input-field"
+                        placeholder="Enter your phrase..."
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <span class="btn-text">Generate Prediction</span>
+                        <span class="btn-loader"></span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Results Container -->
+        <section class="results" id="results">
+            
+            <!-- Predictions Cards -->
+            <div class="predictions-grid" id="predictionsGrid"></div>
+
+            <!-- Chart Section -->
+            <div class="chart-card" id="chartCard">
+                <h2 class="section-title">Prediction Confidence</h2>
+                <div class="chart-container">
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Analysis Section -->
+            <div class="analysis-card" id="analysisCard">
+                <h2 class="section-title">Analysis</h2>
+                
+                <div class="analysis-grid">
+                    <div class="analysis-item" id="grammarContext">
+                        <span class="analysis-label">Grammar Context</span>
+                        <p class="analysis-text"></p>
+                    </div>
+                    
+                    <div class="analysis-item" id="syntacticAnalysis">
+                        <span class="analysis-label">Syntactic Analysis</span>
+                        <p class="analysis-text"></p>
+                    </div>
+                    
+                    <div class="analysis-item" id="semanticContext">
+                        <span class="analysis-label">Semantic Context</span>
+                        <p class="analysis-text"></p>
+                    </div>
+                    
+                    <div class="analysis-item" id="commonPatterns">
+                        <span class="analysis-label">Common Patterns</span>
+                        <p class="analysis-text"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Message -->
+        <div class="error-message" id="errorMessage">
+            <p id="errorText"></p>
         </div>
-        <div class="heatmap-panel">
-          <h3>Prediction Heatmap</h3>
-          <canvas id="heatmapChart"></canvas>
-        </div>
-      </div>
-      <div id="canvasContainer" class="canvas-container"></div>
-      <div class="comparison-section">
-        <h3>Compare Similar Phrases</h3>
-        <div class="example-phrases">
-          <div
-            class="example-phrase"
-            onclick="useExample('The cat sat on the')"
-          >
-            The cat sat on the
-          </div>
-          <div
-            class="example-phrase"
-            onclick="useExample('The dog sat on the')"
-          >
-            The dog sat on the
-          </div>
-          <div
-            class="example-phrase"
-            onclick="useExample('The bird sat on the')"
-          >
-            The bird sat on the
-          </div>
-        </div>
-      </div>
-    </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-  </body>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/static/script.js"></script>
+</body>
 </html>

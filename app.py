@@ -3,26 +3,26 @@ from openai import OpenAI
 import os
 import json
 import re
+#local system
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = Flask(__name__)
 
 # ------------------------------
-#  CONFIGURE NVIDIA OPENAI CLIENT
+#  CONFIGURE GROQ CLIENT
 # ------------------------------
 
-api_key = os.getenv("NVIDIA_API_KEY")
+api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
-    print("ERROR: NVIDIA_API_KEY not found in environment variables")
-else:
-    # Relaxed valid key check (NVIDIA keys contain "-" and ".")
-    if not re.match(r'^[A-Za-z0-9._\-]+$', api_key):
-        print("Warning: NVIDIA_API_KEY format looks unusual (but may still be valid)")
+    print("ERROR: GROQ_API_KEY not found in environment variables")
 
-# Create proper NVIDIA client
+# Create Groq client (OpenAI compatible)
 client = OpenAI(
     api_key=api_key,
-    base_url="https://integrate.api.nvidia.com/v1"
+    base_url="https://api.groq.com/openai/v1"
 )
 
 print("API Key present:", bool(api_key))
@@ -34,6 +34,21 @@ print("API Key present:", bool(api_key))
 
 def clean_json_response(response_text):
     """Extracts the first valid JSON object from the response."""
+    # ✅ Remove markdown code blocks if present
+    response_text = response_text.strip()
+    
+    # Remove ```json and ``` markers
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    elif response_text.startswith("```"):
+        response_text = response_text[3:]
+    
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+    
+    response_text = response_text.strip()
+    
+    # Find JSON object
     json_start = response_text.find('{')
     json_end = response_text.rfind('}') + 1
     
@@ -62,73 +77,129 @@ def predict():
             return jsonify({'error': 'No phrase provided'}), 400
 
         if not api_key:
-            return jsonify({'error': 'NVIDIA_API_KEY not found'}), 500
+            return jsonify({'error': 'GROQ_API_KEY not found'}), 500
 
         # ------------------------------
         #  BUILD PROMPT
         # ------------------------------
 
-        prompt = f'''
-You are a language model that predicts next words. Given the phrase "{input_phrase}", provide ONLY a JSON response with the following structure. Do not include any other text, explanations, or thinking process:
+        prompt = f'''Given the phrase "{input_phrase}", predict the next likely words.
+
+Return ONLY this exact JSON structure with no additional text:
 
 {{
     "predictions": [
         {{
-            "word": "example1",
-            "confidence": 0.8,
+            "word": "predicted_word_1",
+            "confidence": 0.85,
             "attention": [0.1, 0.2, 0.3, 0.2, 0.2],
-            "reasoning": "Explanation for this prediction"
+            "reasoning": "Why this word fits"
+        }},
+        {{
+            "word": "predicted_word_2",
+            "confidence": 0.72,
+            "attention": [0.15, 0.25, 0.25, 0.2, 0.15],
+            "reasoning": "Why this word fits"
+        }},
+        {{
+            "word": "predicted_word_3",
+            "confidence": 0.65,
+            "attention": [0.2, 0.2, 0.2, 0.2, 0.2],
+            "reasoning": "Why this word fits"
         }}
     ],
-    "grammar_context": "Analysis of the grammar",
+    "grammar_context": "Brief grammar analysis of the input phrase",
     "reasoning": {{
-        "syntactic_analysis": "Analysis of sentence structure",
-        "semantic_context": "Analysis of meaning",
-        "common_patterns": "Analysis of patterns"
+        "syntactic_analysis": "Sentence structure analysis",
+        "semantic_context": "Meaning and context analysis",
+        "common_patterns": "Common language patterns identified"
     }}
-}}
-
-IMPORTANT: Respond with ONLY the JSON object. No other text, no thinking process, no explanations.
-'''
+}}'''
 
         print("Making API call...")
+        print(f"Input phrase: {input_phrase}")
 
         # ------------------------------
-        #  CALL NVIDIA MODEL
+        #  CALL GROQ MODEL
         # ------------------------------
 
         completion = client.chat.completions.create(
-            model="meta/llama-3.1-8b-instruct",  # stable NVIDIA-supported model
+            model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "Return ONLY valid JSON. No explanations."},
+                {
+                    "role": "system", 
+                    "content": "You are a JSON-only response bot. Return ONLY valid JSON with no markdown, no explanations, no extra text. Start your response with { and end with }."
+                },
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.5,
-            max_tokens=600
+            temperature=0.3,  # ✅ Lower temperature for more consistent output
+            max_tokens=800
         )
 
         raw_output = completion.choices[0].message.content
-        print("Raw model response:", raw_output)
+        print("=" * 50)
+        print("Raw model response:")
+        print(raw_output)
+        print("=" * 50)
 
         # ------------------------------
         #  CLEAN & VALIDATE JSON
         # ------------------------------
 
         cleaned = clean_json_response(raw_output)
+        
         if not cleaned:
-            return jsonify({'error': 'No valid JSON found in model output'}), 500
+            print("ERROR: Could not extract JSON from response")
+            # ✅ Return a fallback response instead of error
+            fallback_response = {
+                "predictions": [
+                    {
+                        "word": "the",
+                        "confidence": 0.7,
+                        "attention": [0.2, 0.2, 0.2, 0.2, 0.2],
+                        "reasoning": "Common continuation word"
+                    }
+                ],
+                "grammar_context": "Analysis unavailable",
+                "reasoning": {
+                    "syntactic_analysis": "Could not parse model response",
+                    "semantic_context": "Please try again",
+                    "common_patterns": "N/A"
+                }
+            }
+            return jsonify({'response': fallback_response})
+
+        print("Cleaned JSON:")
+        print(cleaned)
 
         try:
             parsed = json.loads(cleaned)
+            print("✅ JSON parsed successfully")
         except json.JSONDecodeError as e:
+            print(f"JSON parse error: {str(e)}")
+            print(f"Attempted to parse: {cleaned[:200]}...")
             return jsonify({'error': f'Invalid JSON returned by model: {str(e)}'}), 500
+
+        # ✅ Validate response structure
+        if 'predictions' not in parsed:
+            parsed['predictions'] = []
+        if 'grammar_context' not in parsed:
+            parsed['grammar_context'] = "N/A"
+        if 'reasoning' not in parsed:
+            parsed['reasoning'] = {
+                "syntactic_analysis": "N/A",
+                "semantic_context": "N/A", 
+                "common_patterns": "N/A"
+            }
 
         return jsonify({'response': parsed})
 
     except Exception as e:
         print("Internal error:", str(e))
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)  # ✅ Enable debug mode

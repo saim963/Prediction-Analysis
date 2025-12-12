@@ -1,230 +1,236 @@
-let tokens = [];
-let predictions = [];
-let grammarContext = '';
-let reasoning = {};
-let lastRequestTime = 0;
-const COOLDOWN = 3000; // 3 seconds
-let heatmapChart = null;
-let canvas = null;
+(function() {
+    'use strict';
 
-function setup() {
-    console.log('Setup called');
-    const container = document.getElementById('canvasContainer');
-    if (!container) {
-        console.error('Canvas container not found');
-        return;
-    }
-    canvas = createCanvas(1200, 600);
-    canvas.parent('canvasContainer');
-    textSize(16);
-}
+    // DOM Elements
+    const form = document.getElementById('predictionForm');
+    const input = document.getElementById('phraseInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const results = document.getElementById('results');
+    const predictionsGrid = document.getElementById('predictionsGrid');
+    const chartCard = document.getElementById('chartCard');
+    const analysisCard = document.getElementById('analysisCard');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
 
-function draw() {
-    if (!canvas) return;
-    
-    background(255);
-    if (tokens.length > 0) {
-        for (let i = 0; i < tokens.length; i++) {
-            textAlign(CENTER);
-            fill(0);
-            text(tokens[i], 100 + i * 100, 200);
-        }
-        for (let p = 0; p < predictions.length; p++) {
-            const pred = predictions[p];
-            if (!pred || !pred.attention) continue;
-            
-            const predX = 100 + tokens.length * 100;
-            const predY = 300 + p * 60;
-            textAlign(CENTER);
-            fill(0);
-            text(pred.word, predX, predY);
-            textAlign(LEFT);
-            fill(100);
-            text(`${(pred.confidence * 100).toFixed(1)}%`, predX + 50, predY);
-            
-            for (let i = 0; i < tokens.length; i++) {
-                const weight = pred.attention[i] || 0;
-                strokeWeight(Math.max(weight * 5, 0.5));
-                stroke(0, 0, 255, weight * 255);
-                line(predX, predY + 10, 100 + i * 100, 200);
+    // Chart instance
+    let chart = null;
+
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const phrase = input.value.trim();
+        if (!phrase) return;
+
+        setLoading(true);
+        hideError();
+        hideResults();
+
+        try {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phrase: phrase })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                showError(data.error);
+                return;
             }
-        }
-    }
-}
 
-function updateHeatmap() {
-    const ctx = document.getElementById('heatmapChart').getContext('2d');
-    if (heatmapChart) heatmapChart.destroy();
-    const labels = predictions.map(p => p.word);
-    const data = predictions.map(p => p.confidence * 100);
-    heatmapChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Prediction Confidence',
-                data: data,
-                backgroundColor: data.map(value => `rgba(76, 175, 80, ${value / 100})`),
-                borderColor: 'rgba(76, 175, 80, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    title: { display: true, text: 'Confidence (%)' }
-                }
+            if (data.response) {
+                renderResults(data.response);
+            } else {
+                showError('Invalid response from server');
             }
+
+        } catch (err) {
+            showError('Connection failed. Please try again.');
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     });
-}
 
-function updateContextClues() {
-    const contextDiv = document.getElementById('contextClues');
-    if (predictions.length > 0) {
-        let contextText = '<strong>Context Analysis:</strong><br>';
-        
-        // Add grammar context
-        contextText += `<div class="analysis-section">
-            <h4>Grammar Context</h4>
-            <p>${grammarContext}</p>
-        </div>`;
+    // Render all results
+    function renderResults(data) {
+        renderPredictions(data.predictions || []);
+        renderChart(data.predictions || []);
+        renderAnalysis(data);
+        showResults();
+    }
 
-        // Add reasoning if available
-        if (reasoning) {
-            contextText += `<div class="analysis-section">
-                <h4>Detailed Analysis</h4>
-                <p><strong>Syntactic Analysis:</strong> ${reasoning.syntactic_analysis || 'Not available'}</p>
-                <p><strong>Semantic Context:</strong> ${reasoning.semantic_context || 'Not available'}</p>
-                <p><strong>Common Patterns:</strong> ${reasoning.common_patterns || 'Not available'}</p>
-            </div>`;
+    // Render prediction cards
+    function renderPredictions(predictions) {
+        if (!predictions.length) {
+            predictionsGrid.innerHTML = '<p style="color: var(--color-text-muted);">No predictions available</p>';
+            return;
         }
 
-        // Add prediction-specific reasoning
-        contextText += '<div class="analysis-section"><h4>Prediction Reasoning</h4>';
-        predictions.forEach((pred, index) => {
-            if (pred.reasoning) {
-                contextText += `<p><strong>${pred.word}:</strong> ${pred.reasoning}</p>`;
+        predictionsGrid.innerHTML = predictions.map((pred, index) => {
+            const percent = (pred.confidence * 100).toFixed(0);
+            return `
+                <div class="prediction-card">
+                    <div class="prediction-rank">${index + 1}</div>
+                    <div class="prediction-content">
+                        <div class="prediction-word">${escapeHtml(pred.word)}</div>
+                        <div class="prediction-reasoning">${escapeHtml(pred.reasoning)}</div>
+                    </div>
+                    <div class="prediction-confidence">
+                        <span class="confidence-value">${percent}%</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Render Chart.js bar chart
+    function renderChart(predictions) {
+        const ctx = document.getElementById('confidenceChart').getContext('2d');
+
+        // Destroy existing chart
+        if (chart) {
+            chart.destroy();
+        }
+
+        const labels = predictions.map(p => p.word);
+        const values = predictions.map(p => (p.confidence * 100).toFixed(1));
+
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Confidence %',
+                    data: values,
+                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 0,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: {
+                            family: "'Inter', sans-serif",
+                            size: 13,
+                            weight: '600'
+                        },
+                        bodyFont: {
+                            family: "'Inter', sans-serif",
+                            size: 12
+                        },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + '% confidence';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                family: "'Inter', sans-serif",
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: '#64748b'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: '#f1f5f9'
+                        },
+                        ticks: {
+                            font: {
+                                family: "'Inter', sans-serif",
+                                size: 11
+                            },
+                            color: '#94a3b8',
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
             }
         });
-        contextText += '</div>';
-
-        // Add attention analysis
-        const topPred = predictions[0];
-        if (topPred && topPred.attention) {
-            const maxAttentionIndex = topPred.attention.indexOf(Math.max(...topPred.attention));
-            contextText += `<div class="analysis-section">
-                <h4>Attention Analysis</h4>
-                <p>Most attention on word "${tokens[maxAttentionIndex]}"</p>
-            </div>`;
-        }
-
-        contextDiv.innerHTML = contextText;
-    } else {
-        contextDiv.innerHTML = '';
-    }
-}
-
-function useExample(phrase) {
-    document.getElementById('phraseInput').value = phrase;
-    predictAndVisualize();
-}
-
-async function predictAndVisualize() {
-    console.log('Predict called');
-    const predictBtn = document.getElementById('predictBtn');
-    const predictionDiv = document.getElementById('prediction');
-    const now = Date.now();
-
-    if (now - lastRequestTime < COOLDOWN) {
-        const waitTime = Math.ceil((COOLDOWN - (now - lastRequestTime)) / 1000);
-        predictionDiv.innerText = `Please wait ${waitTime} seconds before trying again`;
-        return;
     }
 
-    predictBtn.disabled = true;
-    predictionDiv.innerText = 'Predicting...';
-    const input = document.getElementById('phraseInput').value;
+    // Render analysis section
+    function renderAnalysis(data) {
+        const grammarEl = document.querySelector('#grammarContext .analysis-text');
+        const syntacticEl = document.querySelector('#syntacticAnalysis .analysis-text');
+        const semanticEl = document.querySelector('#semanticContext .analysis-text');
+        const patternsEl = document.querySelector('#commonPatterns .analysis-text');
 
-    if (!input.trim()) {
-        predictionDiv.innerText = 'Please enter a phrase';
-        predictBtn.disabled = false;
-        return;
-    }
-
-    tokens = input.split(' ').filter(Boolean);
-    console.log('Tokens:', tokens);
-    predictionDiv.innerHTML = '';
-
-    try {
-        lastRequestTime = Date.now();
-        const response = await fetch('/predict', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phrase: input })
-        });
-
-        // First check if the response is ok
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Server error:', errorText);
-            throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        }
-
-        // Then try to parse as JSON
-        const data = await response.json();
+        grammarEl.textContent = data.grammar_context || 'Not available';
         
-        let resultJson;
-        try {
-            resultJson = JSON.parse(data.response);
-        } catch (e) {
-            console.error('JSON parse failed:', e);
-            throw new Error('Invalid response format from API');
+        if (data.reasoning) {
+            syntacticEl.textContent = data.reasoning.syntactic_analysis || 'Not available';
+            semanticEl.textContent = data.reasoning.semantic_context || 'Not available';
+            patternsEl.textContent = data.reasoning.common_patterns || 'Not available';
+        } else {
+            syntacticEl.textContent = 'Not available';
+            semanticEl.textContent = 'Not available';
+            patternsEl.textContent = 'Not available';
         }
-
-        predictions = resultJson.predictions || [];
-        grammarContext = resultJson.grammar_context || 'No grammar context provided.';
-        reasoning = resultJson.reasoning || {};
-        
-        console.log('Predictions:', predictions);
-        console.log('Grammar Context:', grammarContext);
-        console.log('Reasoning:', reasoning);
-
-        if (predictions.length === 0) {
-            throw new Error('No predictions received from API');
-        }
-
-        predictionDiv.innerHTML = '';
-        predictions.forEach(pred => {
-            const predItem = document.createElement('div');
-            predItem.className = 'prediction-item';
-            predItem.innerHTML = `
-                <div>${pred.word}</div>
-                <div class="confidence-bar">
-                    <div class="confidence-fill" style="width: ${pred.confidence * 100}%"></div>
-                </div>
-                <div>${(pred.confidence * 100).toFixed(1)}%</div>
-            `;
-            predictionDiv.appendChild(predItem);
-        });
-
-        updateHeatmap();
-        updateContextClues();
-
-    } catch (error) {
-        console.error('API call failed:', error);
-        predictionDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
-        predictions = [];
-        grammarContext = '';
-        reasoning = {};
-        updateHeatmap();
-        updateContextClues();
     }
 
-    predictBtn.disabled = false;
-} 
+    // UI State functions
+    function setLoading(loading) {
+        submitBtn.classList.toggle('loading', loading);
+        submitBtn.disabled = loading;
+    }
+
+    function showResults() {
+        results.classList.add('visible');
+    }
+
+    function hideResults() {
+        results.classList.remove('visible');
+    }
+
+    function showError(message) {
+        errorText.textContent = message;
+        errorMessage.classList.add('visible');
+    }
+
+    function hideError() {
+        errorMessage.classList.remove('visible');
+    }
+
+    // Utility: Escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+})();
