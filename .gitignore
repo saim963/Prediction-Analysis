@@ -8,3 +8,5 @@ prediction/
 # Ignore common Python file artifacts
 __pycache__/
 *.pyc
+
+.vercel

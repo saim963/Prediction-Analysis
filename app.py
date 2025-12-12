@@ -3,9 +3,14 @@ from openai import OpenAI
 import os
 import json
 import re
-#local system
-from dotenv import load_dotenv
-load_dotenv()
+
+# Load .env file only if it exists (local development)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, using system env variables (Vercel)
+
 
 
 app = Flask(__name__)
@@ -34,10 +39,8 @@ print("API Key present:", bool(api_key))
 
 def clean_json_response(response_text):
     """Extracts the first valid JSON object from the response."""
-    # ✅ Remove markdown code blocks if present
     response_text = response_text.strip()
     
-    # Remove ```json and ``` markers
     if response_text.startswith("```json"):
         response_text = response_text[7:]
     elif response_text.startswith("```"):
@@ -48,7 +51,6 @@ def clean_json_response(response_text):
     
     response_text = response_text.strip()
     
-    # Find JSON object
     json_start = response_text.find('{')
     json_end = response_text.rfind('}') + 1
     
@@ -78,10 +80,6 @@ def predict():
 
         if not api_key:
             return jsonify({'error': 'GROQ_API_KEY not found'}), 500
-
-        # ------------------------------
-        #  BUILD PROMPT
-        # ------------------------------
 
         prompt = f'''Given the phrase "{input_phrase}", predict the next likely words.
 
@@ -119,10 +117,6 @@ Return ONLY this exact JSON structure with no additional text:
         print("Making API call...")
         print(f"Input phrase: {input_phrase}")
 
-        # ------------------------------
-        #  CALL GROQ MODEL
-        # ------------------------------
-
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
@@ -132,25 +126,16 @@ Return ONLY this exact JSON structure with no additional text:
                 },
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,  # ✅ Lower temperature for more consistent output
+            temperature=0.3,
             max_tokens=800
         )
 
         raw_output = completion.choices[0].message.content
-        print("=" * 50)
-        print("Raw model response:")
-        print(raw_output)
-        print("=" * 50)
-
-        # ------------------------------
-        #  CLEAN & VALIDATE JSON
-        # ------------------------------
+        print("Raw model response:", raw_output)
 
         cleaned = clean_json_response(raw_output)
         
         if not cleaned:
-            print("ERROR: Could not extract JSON from response")
-            # ✅ Return a fallback response instead of error
             fallback_response = {
                 "predictions": [
                     {
@@ -169,18 +154,11 @@ Return ONLY this exact JSON structure with no additional text:
             }
             return jsonify({'response': fallback_response})
 
-        print("Cleaned JSON:")
-        print(cleaned)
-
         try:
             parsed = json.loads(cleaned)
-            print("✅ JSON parsed successfully")
         except json.JSONDecodeError as e:
-            print(f"JSON parse error: {str(e)}")
-            print(f"Attempted to parse: {cleaned[:200]}...")
             return jsonify({'error': f'Invalid JSON returned by model: {str(e)}'}), 500
 
-        # ✅ Validate response structure
         if 'predictions' not in parsed:
             parsed['predictions'] = []
         if 'grammar_context' not in parsed:
@@ -196,10 +174,12 @@ Return ONLY this exact JSON structure with no additional text:
 
     except Exception as e:
         print("Internal error:", str(e))
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
+# ✅ IMPORTANT: Remove or modify the if __name__ block for Vercel
 if __name__ == '__main__':
-    app.run(debug=True)  # ✅ Enable debug mode
+    app.run(debug=True)
+
+# ✅ Vercel needs this - expose the app
+app = app
